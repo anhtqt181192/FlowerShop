@@ -1,0 +1,87 @@
+﻿@page "/Account/LoginWithRecoveryCode"
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using FlowerShop.Data
+
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject IdentityRedirectManager RedirectManager
+@inject ILogger<LoginWithRecoveryCode> Logger
+
+<PageTitle>Xác minh mã phỡc hồi</PageTitle>
+
+<h1>Xác minh mã phỡc hồi</h1>
+<hr />
+<StatusMessage Message="@message" />
+<p>
+    Bạn đã yêu cầu đăng nhập bằng mã phỡc hồi. Đăng nhập này sẽ không được ghi nhớ cho đến khi bạn cung cấp
+    mã ứng dụng xác thực tại màn hình đăng nhập hoặc vô hiệu hóa 2FA và đăng nhập lại.
+</p>
+<div class="row">
+    <div class="col-md-4">
+        <EditForm Model="Input" FormName="login-with-recovery-code" OnValidSubmit="OnValidSubmitAsync" method="post">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert" />
+            <div class="form-floating mb-3">
+                <InputText @bind-Value="Input.RecoveryCode" id="Input.RecoveryCode" class="form-control" autocomplete="off" placeholder="Mã phỡc hồi" />
+                <label for="Input.RecoveryCode" class="form-label">Mã phỡc hồi</label>
+                <ValidationMessage For="() => Input.RecoveryCode" class="text-danger" />
+            </div>
+            <button type="submit" class="w-100 btn btn-lg btn-primary">Đăng nhập</button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private string? message;
+    private ApplicationUser user = default!;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = default!;
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Input ??= new();
+
+        // Ensure the user has gone through the username & password screen first
+        user = await SignInManager.GetTwoFactorAuthenticationUserAsync() ??
+            throw new InvalidOperationException("Unable to load two-factor authentication user.");
+    }
+
+    private async Task OnValidSubmitAsync()
+    {
+        var recoveryCode = Input.RecoveryCode.Replace(" ", string.Empty);
+
+        var result = await SignInManager.TwoFactorRecoveryCodeSignInAsync(recoveryCode);
+
+        var userId = await UserManager.GetUserIdAsync(user);
+
+        if (result.Succeeded)
+        {
+            Logger.LogInformation("Người dùng có ID '{UserId}' đăng nhập bằng mã phỡc hồi.", userId);
+            RedirectManager.RedirectTo(ReturnUrl);
+        }
+        else if (result.IsLockedOut)
+        {
+            Logger.LogWarning("Tài khoản người dùng bị khóa.");
+            RedirectManager.RedirectTo("Account/Lockout");
+        }
+        else
+        {
+            Logger.LogWarning("Mã phỡc hồi không hợp lệ được nhập cho người dùng có ID '{UserId}' ", userId);
+            message = "Lỗi: Mã phỡc hồi không hợp lệ đã nhập.";
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [DataType(DataType.Text)]
+        [Display(Name = "Recovery Code")]
+        public string RecoveryCode { get; set; } = "";
+    }
+}

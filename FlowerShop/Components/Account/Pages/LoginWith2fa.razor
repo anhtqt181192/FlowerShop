@@ -1,0 +1,103 @@
+﻿@page "/Account/LoginWith2fa"
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using FlowerShop.Data
+
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject IdentityRedirectManager RedirectManager
+@inject ILogger<LoginWith2fa> Logger
+
+<PageTitle>Xác thực hai yếu tố</PageTitle>
+
+<h1>Xác thực hai yếu tố</h1>
+<hr />
+<StatusMessage Message="@message" />
+<p>Đăng nhập của bạn được bảo vệ bằng ứng dụng xác thực. Nhập mã xác thực của bạn bên dưới.</p>
+<div class="row">
+    <div class="col-md-4">
+        <EditForm Model="Input" FormName="login-with-2fa" OnValidSubmit="OnValidSubmitAsync" method="post">
+            <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
+            <input type="hidden" name="RememberMe" value="@RememberMe" />
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert" />
+            <div class="form-floating mb-3">
+                <InputText @bind-Value="Input.TwoFactorCode" id="Input.TwoFactorCode" class="form-control" autocomplete="off" />
+                <label for="Input.TwoFactorCode" class="form-label">Mã xác thực</label>
+                <ValidationMessage For="() => Input.TwoFactorCode" class="text-danger" />
+            </div>
+            <div class="checkbox mb-3">
+                <label for="remember-machine" class="form-label">
+                    <InputCheckbox @bind-Value="Input.RememberMachine" />
+                    Nhớ máy tính này
+                </label>
+            </div>
+            <div>
+                <button type="submit" class="w-100 btn btn-lg btn-primary">Đăng nhập</button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+<p>
+    Không có quyền truy cập vào thẺ xác thực của bạn? Bạn có thể
+    <a href="Account/LoginWithRecoveryCode?ReturnUrl=@ReturnUrl">đăng nhập bằng mã phỡc hồi</a>.
+</p>
+
+@code {
+    private string? message;
+    private ApplicationUser user = default!;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = default!;
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    [SupplyParameterFromQuery]
+    private bool RememberMe { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Input ??= new();
+
+        // Ensure the user has gone through the username & password screen first
+        user = await SignInManager.GetTwoFactorAuthenticationUserAsync() ??
+            throw new InvalidOperationException("Unable to load two-factor authentication user.");
+    }
+
+    private async Task OnValidSubmitAsync()
+    {
+        var authenticatorCode = Input.TwoFactorCode!.Replace(" ", string.Empty).Replace("-", string.Empty);
+        var result = await SignInManager.TwoFactorAuthenticatorSignInAsync(authenticatorCode, RememberMe, Input.RememberMachine);
+        var userId = await UserManager.GetUserIdAsync(user);
+
+        if (result.Succeeded)
+        {
+            Logger.LogInformation("Người dùng có ID '{UserId}' đăng nhập với 2fa.", userId);
+            RedirectManager.RedirectTo(ReturnUrl);
+        }
+        else if (result.IsLockedOut)
+        {
+            Logger.LogWarning("Tài khoản người dùng có ID '{UserId}' bị khóa.", userId);
+            RedirectManager.RedirectTo("Account/Lockout");
+        }
+        else
+        {
+            Logger.LogWarning("Mã xác thực không hợp lệ được nhập cho người dùng có ID '{UserId}'.", userId);
+            message = "Lỗi: Mã xác thực không hợp lệ.";
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [StringLength(7, ErrorMessage = "Trường {0} phải có ít nhất {2} và tối đa {1} ký tự.", MinimumLength = 6)]
+        [DataType(DataType.Text)]
+        [Display(Name = "Mã xác thực")]
+        public string? TwoFactorCode { get; set; }
+
+        [Display(Name = "Nhớ máy tính này")]
+        public bool RememberMachine { get; set; }
+    }
+}

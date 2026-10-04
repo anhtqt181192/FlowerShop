@@ -1,0 +1,57 @@
+﻿@page "/Account/Manage/ResetAuthenticator"
+
+@using Microsoft.AspNetCore.Identity
+@using FlowerShop.Data
+
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IdentityRedirectManager RedirectManager
+@inject ILogger<ResetAuthenticator> Logger
+
+<PageTitle>Đặt lại khóa xác thực</PageTitle>
+
+<StatusMessage />
+<h3>Đặt lại khóa xác thực</h3>
+<div class="alert alert-warning" role="alert">
+    <p>
+        <span class="glyphicon glyphicon-warning-sign"></span>
+        <strong>Nếu bạn đặt lại khóa xác thực của bạn, ứng dụng xác thực của bạn sẽ không hoạt động cho đến khi bạn đặt cấu hình lại.</strong>
+    </p>
+    <p>
+        Quá trình này vô hiệu hóa 2FA cho đến khi bạn xác thực ứng dụng xác thực của bạn.
+        Nếu bạn không hoàn thành cấu hình ứng dụng xác thực của bạn, bạn có thể mất quyền truy cập tài khoản của bạn.
+    </p>
+</div>
+<div>
+    <form @formname="reset-authenticator" @onsubmit="OnSubmitAsync" method="post">
+        <AntiforgeryToken />
+        <button class="btn btn-danger" type="submit">Đặt lại khóa xác thực</button>
+    </form>
+</div>
+
+@code {
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    private async Task OnSubmitAsync()
+    {
+        var user = await UserManager.GetUserAsync(HttpContext.User);
+        if (user is null)
+        {
+            RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+            return;
+        }
+
+        await UserManager.SetTwoFactorEnabledAsync(user, false);
+        await UserManager.ResetAuthenticatorKeyAsync(user);
+        var userId = await UserManager.GetUserIdAsync(user);
+        Logger.LogInformation("User with ID '{UserId}' has reset their authentication app key.", userId);
+
+        await SignInManager.RefreshSignInAsync(user);
+
+        RedirectManager.RedirectToWithStatus(
+            "Account/Manage/EnableAuthenticator",
+            "Khóa xác thực của bạn đã được đặt lại, bạn sẽ cần đặt cấu hình ứng dụng xác thực của bạn bằng khóa mới.",
+            HttpContext);
+    }
+}

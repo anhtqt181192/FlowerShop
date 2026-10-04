@@ -1,0 +1,13 @@
+﻿@page "/auth"
+
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize]
+
+<PageTitle>Xác thực</PageTitle>
+
+<h1>Bạn đã được xác thực</h1>
+
+<AuthorizeView>
+    Xin chào @context.User.Identity?.Name!
+</AuthorizeView>

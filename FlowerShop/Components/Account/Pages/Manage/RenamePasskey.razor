@@ -1,0 +1,95 @@
+﻿@page "/Account/Manage/RenamePasskey/{Id}"
+
+@using FlowerShop.Data
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using System.Buffers.Text
+
+@inject UserManager<ApplicationUser> UserManager
+@inject IdentityRedirectManager RedirectManager
+
+<EditForm Model="Input" OnValidSubmit="Rename" FormName="rename-passkey" method="post">
+    <DataAnnotationsValidator />
+    @if (passkey?.Name is { } name)
+    {
+        <h4>Đặt tên mới cho khóa truy cập "@name" của bạn</h4>
+    }
+    else
+    {
+        <h4>Đặt tên cho khóa truy cập của bạn</h4>
+    }
+    <hr />
+    <ValidationSummary class="text-danger" role="alert" />
+    <div class="form-floating mb-3">
+        <InputText @bind-Value="Input.Name" id="Input.Name" class="form-control" aria-required="true" placeholder="Khóa truy cập của tôi" />
+        <label for="Input.Name" class="form-label">Tên khóa truy cập</label>
+        <ValidationMessage For="() => Input.Name" class="text-danger" />
+    </div>
+    <div>
+        <button type="submit" class="w-100 btn btn-lg btn-primary">Tiếp tục</button>
+    </div>
+</EditForm>
+
+@code {
+    private ApplicationUser? user;
+    private UserPasskeyInfo? passkey;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [Parameter]
+    public string? Id { get; set; }
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Input ??= new();
+
+        user = (await UserManager.GetUserAsync(HttpContext.User))!;
+        if (user is null)
+        {
+            RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+            return;
+        }
+
+        byte[] credentialId;
+        try
+        {
+            credentialId = Base64Url.DecodeFromChars(Id);
+        }
+        catch (FormatException)
+        {
+            RedirectManager.RedirectToWithStatus("Account/Manage/Passkeys", "Lỗi: ID khóa truy cập được chỉ định có định dạng không hợp lệ.", HttpContext);
+            return;
+        }
+
+        passkey = await UserManager.GetPasskeyAsync(user, credentialId);
+        if (passkey is null)
+        {
+            RedirectManager.RedirectToWithStatus("Account/Manage/Passkeys", "Lỗi: Khóa truy cập được chỉ định không thể được tìm thấy.", HttpContext);
+            return;
+        }
+    }
+
+    private async Task Rename()
+    {
+        passkey!.Name = Input.Name;
+        var result = await UserManager.AddOrUpdatePasskeyAsync(user!, passkey);
+        if (!result.Succeeded)
+        {
+            RedirectManager.RedirectToWithStatus("Account/Manage/Passkeys", "Lỗi: Khóa truy cập không thể được cập nhật.", HttpContext);
+            return;
+        }
+
+        RedirectManager.RedirectToWithStatus("Account/Manage/Passkeys", "Khóa truy cập đã được cập nhật thành công.", HttpContext);
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [StringLength(200, ErrorMessage = "Tên khóa truy cập phải không quá {1} ký tự.")]
+        public string Name { get; set; } = "";
+    }
+}

@@ -1,0 +1,43 @@
+﻿@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Identity
+@using FlowerShop.Data
+
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IdentityRedirectManager RedirectManager
+
+@if (externalLogins.Length == 0)
+{
+    <div>
+        <p>
+            Không có dịch vụ xác thực bên ngoài được cấu hình. Xem <a href="https://go.microsoft.com/fwlink/?LinkID=532715">bài viết này
+            về việc thiết lập ứng dụng ASP.NET này để hỗ trợ đăng nhập qua các dịch vụ bên ngoài</a>.
+        </p>
+    </div>
+}
+else
+{
+    <form class="form-horizontal" action="Account/PerformExternalLogin" method="post">
+        <div>
+            <AntiforgeryToken />
+            <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
+            <p>
+                @foreach (var provider in externalLogins)
+                {
+                    <button type="submit" class="btn btn-primary" name="provider" value="@provider.Name" title="Đăng nhập bằng tài khoản @provider.DisplayName của bạn">@provider.DisplayName</button>
+                }
+            </p>
+        </div>
+    </form>
+}
+
+@code {
+    private AuthenticationScheme[] externalLogins = [];
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        externalLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync()).ToArray();
+    }
+}

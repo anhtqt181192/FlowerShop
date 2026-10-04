@@ -1,0 +1,78 @@
+﻿@page "/Account/Manage/GenerateRecoveryCodes"
+
+@using Microsoft.AspNetCore.Identity
+@using FlowerShop.Data
+
+@inject UserManager<ApplicationUser> UserManager
+@inject IdentityRedirectManager RedirectManager
+@inject ILogger<GenerateRecoveryCodes> Logger
+
+<PageTitle>Tạo mã phục hồi xác thực hai yếu tố (2FA)</PageTitle>
+
+@if (recoveryCodes is not null)
+{
+    <ShowRecoveryCodes RecoveryCodes="recoveryCodes.ToArray()" StatusMessage="@message" />
+}
+else
+{
+    <h3>Tạo mã phục hồi xác thực hai yếu tố (2FA)</h3>
+    <div class="alert alert-warning" role="alert">
+        <p>
+            <span class="glyphicon glyphicon-warning-sign"></span>
+            <strong>Đặt các mã này ở nơi an toàn.</strong>
+        </p>
+        <p>
+            Nếu bạn mất thiết bị của bạn và không có các mã phục hồi, bạn sẽ mất quyền truy cập tài khoản của bạn.
+        </p>
+        <p>
+            Tạo mã phục hồi mới không thay đổi các khóa được sử dụng trong các ứng dụng xác thực. Nếu bạn muốn thay đổi khóa
+            được sử dụng trong ứng dụng xác thực, bạn nên <a href="Account/Manage/ResetAuthenticator">đặt lại các khóa xác thực của bạn.</a>
+        </p>
+    </div>
+    <div>
+        <form @formname="generate-recovery-codes" @onsubmit="OnSubmitAsync" method="post">
+            <AntiforgeryToken />
+            <button class="btn btn-danger" type="submit">Tạo mã phục hồi</button>
+        </form>
+    </div>
+}
+
+@code {
+    private string? message;
+    private ApplicationUser? user;
+    private IEnumerable<string>? recoveryCodes;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        user = await UserManager.GetUserAsync(HttpContext.User);
+        if (user is null)
+        {
+            RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+            return;
+        }
+
+        var isTwoFactorEnabled = await UserManager.GetTwoFactorEnabledAsync(user);
+        if (!isTwoFactorEnabled)
+        {
+            throw new InvalidOperationException("Cannot generate recovery codes for user because they do not have 2FA enabled.");
+        }
+    }
+
+    private async Task OnSubmitAsync()
+    {
+        if (user is null)
+        {
+            RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+            return;
+        }
+
+        var userId = await UserManager.GetUserIdAsync(user);
+        recoveryCodes = await UserManager.GenerateNewTwoFactorRecoveryCodesAsync(user, 10);
+        message = "Bạn đã tạo mã phục hồi mới.";
+
+        Logger.LogInformation("User with ID '{UserId}' has generated new 2FA recovery codes.", userId);
+    }
+}

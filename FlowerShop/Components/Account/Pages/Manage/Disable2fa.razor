@@ -1,0 +1,74 @@
+﻿@page "/Account/Manage/Disable2fa"
+
+@using Microsoft.AspNetCore.Identity
+@using FlowerShop.Data
+
+@inject UserManager<ApplicationUser> UserManager
+@inject IdentityRedirectManager RedirectManager
+@inject ILogger<Disable2fa> Logger
+
+<PageTitle>Vô hiệu hóa xác thực hai yếu tố (2FA)</PageTitle>
+
+<StatusMessage />
+<h3>Vô hiệu hóa xác thực hai yếu tố (2FA)</h3>
+
+<div class="alert alert-warning" role="alert">
+    <p>
+        <strong>Hành động này chỉ vô hiệu hóa 2FA.</strong>
+    </p>
+    <p>
+        Vô hiệu hóa 2FA không thay đổi các khóa được sử dụng trong các ứng dụng xác thực. Nếu bạn muốn thay đổi khóa
+        được sử dụng trong ứng dụng xác thực, bạn nên <a href="Account/Manage/ResetAuthenticator">đặt lại các khóa xác thực của bạn.</a>
+    </p>
+</div>
+
+<div>
+    <form @formname="disable-2fa" @onsubmit="OnSubmitAsync" method="post">
+        <AntiforgeryToken />
+        <button class="btn btn-danger" type="submit">Vô hiệu hóa 2FA</button>
+    </form>
+</div>
+
+@code {
+    private ApplicationUser? user;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        user = await UserManager.GetUserAsync(HttpContext.User);
+        if (user is null)
+        {
+            RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+            return;
+        }
+
+        if (HttpMethods.IsGet(HttpContext.Request.Method) && !await UserManager.GetTwoFactorEnabledAsync(user))
+        {
+            throw new InvalidOperationException("Cannot disable 2FA for user as it's not currently enabled.");
+        }
+    }
+
+    private async Task OnSubmitAsync()
+    {
+        if (user is null)
+        {
+            RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+            return;
+        }
+
+        var disable2faResult = await UserManager.SetTwoFactorEnabledAsync(user, false);
+        if (!disable2faResult.Succeeded)
+        {
+            throw new InvalidOperationException("Unexpected error occurred disabling 2FA.");
+        }
+
+        var userId = await UserManager.GetUserIdAsync(user);
+        Logger.LogInformation("User with ID '{UserId}' has disabled 2fa.", userId);
+        RedirectManager.RedirectToWithStatus(
+            "Account/Manage/TwoFactorAuthentication",
+            "2FA đã bị vô hiệu hóa. Bạn có thể bật lại 2FA khi bạn thiết lập ứng dụng xác thực",
+            HttpContext);
+    }
+}

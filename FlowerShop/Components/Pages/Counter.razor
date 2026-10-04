@@ -1,0 +1,19 @@
+﻿@page "/counter"
+@rendermode InteractiveServer
+
+<PageTitle>Bộ đếm</PageTitle>
+
+<h1>Bộ đếm</h1>
+
+<p role="status">Số lần hiện tại: @currentCount</p>
+
+<button class="btn btn-primary" @onclick="IncrementCount">Nhấp vào đây</button>
+
+@code {
+    private int currentCount = 0;
+
+    private void IncrementCount()
+    {
+        currentCount++;
+    }
+}
