@@ -22,7 +22,7 @@ public static class ShopEndpoints
                 return Results.Created($"/api/orders/{placedOrder.Order.Id}", placedOrder);
             }));
 
-        var management = api.MapGroup("/management").RequireAuthorization();
+        var management = api.MapGroup("/management").RequireAuthorization("ShopAdmin");
         management.MapGet("/flowers", async (ShopApplicationService service, CancellationToken token) =>
             Results.Ok(await service.GetFlowersAsync(true, token)));
         management.MapPost("/flowers", async (CreateFlowerRequest request, ShopApplicationService service, CancellationToken token) =>

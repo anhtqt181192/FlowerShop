@@ -60,6 +60,10 @@ public sealed class Flower : AggregateRoot<Guid>
             throw new DomainRuleException("Giá hoa phải lớn hơn 0.");
         if (categoryId <= 0)
             throw new DomainRuleException("Danh mục không hợp lệ.");
+        if (!string.IsNullOrWhiteSpace(imageUrl) &&
+            (!Uri.TryCreate(imageUrl, UriKind.Absolute, out var imageUri) ||
+             imageUri.Scheme is not ("http" or "https")))
+            throw new DomainRuleException("Địa chỉ ảnh phải là URL HTTPS hoặc HTTP hợp lệ.");
 
         Name = name.Trim();
         Description = description?.Trim();

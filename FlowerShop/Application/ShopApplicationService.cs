@@ -60,7 +60,7 @@ public sealed class ShopApplicationService(IShopRepository repository, IShopUnit
     {
         if (request.Items is null || request.Items.Count == 0)
             throw new DomainRuleException("Giỏ hàng đang trống.");
-        if (request.Items.Any(item => item.Quantity <= 0))
+        if (request.Items.Any(item => item is null || item.Quantity <= 0))
             throw new DomainRuleException("Số lượng sản phẩm phải lớn hơn 0.");
 
         await using var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
@@ -74,8 +74,8 @@ public sealed class ShopApplicationService(IShopRepository repository, IShopUnit
             .ToDictionary(item => item.FlowerId);
         var customer = new Customer(request.FullName, request.Phone, request.Email, request.Address);
         var shipping = new ShippingAddress(
-            request.FullName.Trim(), request.Phone.Trim(), request.Province.Trim(),
-            request.District.Trim(), request.Ward.Trim(), request.ShippingAddress.Trim());
+            request.FullName, request.Phone, request.Province,
+            request.District, request.Ward, request.ShippingAddress);
         var order = new Order(customer.Id, shipping);
 
         foreach (var line in request.Items)
@@ -253,13 +253,27 @@ public sealed class ShopApplicationService(IShopRepository repository, IShopUnit
     {
         foreach (var domainEvent in order.DomainEvents)
         {
-            var (items, type) = domainEvent switch
+            IReadOnlyCollection<OrderItemInfo> items;
+            InventoryTransactionType? type;
+            switch (domainEvent)
             {
-                OrderCreatedEvent created => (created.Items, InventoryTransactionType.Reserve),
-                OrderPaidEvent paid => (paid.Items, InventoryTransactionType.Deduct),
-                OrderCancelledEvent cancelled => (cancelled.Items, InventoryTransactionType.Release),
-                _ => (Array.Empty<OrderItemInfo>(), (InventoryTransactionType?)null)
-            };
+                case OrderCreatedEvent created:
+                    items = created.Items;
+                    type = InventoryTransactionType.Reserve;
+                    break;
+                case OrderPaidEvent paid:
+                    items = paid.Items;
+                    type = InventoryTransactionType.Deduct;
+                    break;
+                case OrderCancelledEvent cancelled:
+                    items = cancelled.Items;
+                    type = InventoryTransactionType.Release;
+                    break;
+                default:
+                    items = Array.Empty<OrderItemInfo>();
+                    type = null;
+                    break;
+            }
 
             if (type is null)
                 continue;

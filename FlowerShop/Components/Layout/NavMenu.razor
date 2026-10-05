@@ -1,8 +1,4 @@
-﻿@implements IDisposable
-
-@inject NavigationManager NavigationManager
-
-<div class="nav-shell">
+﻿<div class="nav-shell">
     <NavLink class="brand" href="/" Match="NavLinkMatch.All">
         nở<span>studio</span>
         <small>FLOWER ATELIER</small>
@@ -13,43 +9,11 @@
         <AuthorizeView>
             <Authorized>
                 <NavLink href="Account/Manage">Tài khoản</NavLink>
-                <a href="/api/management/orders">Quản lý</a>
             </Authorized>
             <NotAuthorized>
                 <NavLink href="Account/Login">Đăng nhập</NavLink>
             </NotAuthorized>
         </AuthorizeView>
-        <button class="cart-nav" @onclick="ScrollToCart" aria-label="Mở giỏ hàng">
-            Giỏ hàng <span>@CartCount</span>
-        </button>
+        <a class="cart-nav" href="/#collection">Giỏ hoa <span>↗</span></a>
     </nav>
 </div>
-
-@code {
-    [Parameter] public int CartCount { get; set; }
-    [Parameter] public EventCallback OnCartClick { get; set; }
-
-    private string? currentUrl;
-
-    private async Task ScrollToCart()
-    {
-        if (OnCartClick.HasDelegate)
-            await OnCartClick.InvokeAsync();
-        else
-            NavigationManager.NavigateTo("/#collection");
-    }
-
-    protected override void OnInitialized()
-    {
-        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
-        NavigationManager.LocationChanged += OnLocationChanged;
-    }
-
-    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
-    {
-        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
-        StateHasChanged();
-    }
-
-    public void Dispose() => NavigationManager.LocationChanged -= OnLocationChanged;
-}

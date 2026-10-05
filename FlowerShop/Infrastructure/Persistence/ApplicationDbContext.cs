@@ -67,9 +67,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.HasIndex(item => item.OrderNumber).IsUnique();
             entity.Property(item => item.Status).HasConversion<int>();
             entity.Property(item => item.TotalAmount).HasPrecision(18, 2);
+            entity.Ignore(item => item.Items);
             entity.HasOne<Customer>().WithMany().HasForeignKey(item => item.CustomerId)
                 .OnDelete(DeleteBehavior.Restrict);
-            entity.HasMany<OrderItem>("_items").WithOne().HasForeignKey("OrderId")
+            entity.HasMany<OrderItem>("_items").WithOne().HasForeignKey("OrderId").IsRequired()
                 .OnDelete(DeleteBehavior.Cascade);
             entity.Navigation("_items").UsePropertyAccessMode(PropertyAccessMode.Field);
             entity.OwnsOne(item => item.ShippingAddress, address =>
@@ -98,7 +99,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.HasKey(item => item.Id);
             entity.HasIndex(item => item.FlowerId).IsUnique();
             entity.Property(item => item.Version).IsRowVersion();
-            entity.HasOne<Flower>().WithOne().HasForeignKey<Inventory>(item => item.FlowerId)
+            entity.HasOne(item => item.Flower).WithOne().HasForeignKey<Inventory>(item => item.FlowerId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -121,6 +122,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(item => item.TransactionCode).HasMaxLength(100);
             entity.HasOne<Order>().WithMany().HasForeignKey(item => item.OrderId)
                 .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(item => item.OrderId).IsUnique();
         });
 
         builder.Entity<Category>().HasData(
