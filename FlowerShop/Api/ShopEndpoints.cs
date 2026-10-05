@@ -19,7 +19,7 @@ public static class ShopEndpoints
             await Handle(async () =>
             {
                 var placedOrder = await service.PlaceOrderAsync(request, token);
-                return Results.Created($"/api/orders/{placedOrder.Order.Id}", placedOrder);
+                return Results.Json(placedOrder, statusCode: StatusCodes.Status201Created);
             }));
 
         var management = api.MapGroup("/management").RequireAuthorization("ShopAdmin");

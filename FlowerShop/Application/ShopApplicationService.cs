@@ -90,7 +90,7 @@ public sealed class ShopApplicationService(IShopRepository repository, IShopUnit
         repository.Add(customer);
         repository.Add(order);
         repository.Add(payment);
-        await ApplyOrderEventsAsync(order, order.OrderNumber, inventories, cancellationToken);
+        ApplyOrderEvents(order, order.OrderNumber, inventories);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
@@ -105,7 +105,7 @@ public sealed class ShopApplicationService(IShopRepository repository, IShopUnit
         order.Cancel();
         var inventories = await repository.GetInventoryAsync(
             order.Items.Select(item => item.FlowerId).ToArray(), cancellationToken);
-        await ApplyOrderEventsAsync(order, order.OrderNumber, inventories.ToDictionary(item => item.FlowerId), cancellationToken);
+        ApplyOrderEvents(order, order.OrderNumber, inventories.ToDictionary(item => item.FlowerId));
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
     }
@@ -121,7 +121,7 @@ public sealed class ShopApplicationService(IShopRepository repository, IShopUnit
         order.MarkPaid();
         var inventories = await repository.GetInventoryAsync(
             order.Items.Select(item => item.FlowerId).ToArray(), cancellationToken);
-        await ApplyOrderEventsAsync(order, paymentId.ToString("N"), inventories.ToDictionary(item => item.FlowerId), cancellationToken);
+        ApplyOrderEvents(order, paymentId.ToString("N"), inventories.ToDictionary(item => item.FlowerId));
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
     }
@@ -169,7 +169,8 @@ public sealed class ShopApplicationService(IShopRepository repository, IShopUnit
             repository.Add(inventory);
         }
         inventory.Import(quantity);
-        repository.Add(new InventoryTransaction(flowerId, InventoryTransactionType.Import, quantity, "STOCK-IMPORT"));
+        repository.Add(new InventoryTransaction(
+            flowerId, InventoryTransactionType.Import, quantity, $"IMPORT-{Guid.NewGuid():N}"));
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
     }
@@ -245,11 +246,10 @@ public sealed class ShopApplicationService(IShopRepository repository, IShopUnit
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    private async Task ApplyOrderEventsAsync(
+    private void ApplyOrderEvents(
         Order order,
         string referenceNo,
-        IReadOnlyDictionary<Guid, Inventory> inventories,
-        CancellationToken cancellationToken)
+        IReadOnlyDictionary<Guid, Inventory> inventories)
     {
         foreach (var domainEvent in order.DomainEvents)
         {
@@ -297,9 +297,8 @@ public sealed class ShopApplicationService(IShopRepository repository, IShopUnit
                 repository.Add(new InventoryTransaction(item.FlowerId, type.Value, item.Quantity, referenceNo));
             }
         }
-
         order.ClearDomainEvents();
-        await Task.CompletedTask;
+        order.ClearDomainEvents();
     }
 
     private static OrderDto MapOrder(Order order) =>

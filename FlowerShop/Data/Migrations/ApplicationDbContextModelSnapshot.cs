@@ -332,6 +332,44 @@ namespace FlowerShop.Migrations
                     b.HasIndex("FlowerId", "CreatedAt");
 
                     b.ToTable("InventoryTransactions", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("c1200000-0000-4000-8000-000000000001"),
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FlowerId = new Guid("a1200000-0000-4000-8000-000000000001"),
+                            Quantity = 18,
+                            ReferenceNo = "INITIAL-STOCK-001",
+                            Type = 1
+                        },
+                        new
+                        {
+                            Id = new Guid("c1200000-0000-4000-8000-000000000002"),
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FlowerId = new Guid("a1200000-0000-4000-8000-000000000002"),
+                            Quantity = 12,
+                            ReferenceNo = "INITIAL-STOCK-002",
+                            Type = 1
+                        },
+                        new
+                        {
+                            Id = new Guid("c1200000-0000-4000-8000-000000000003"),
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FlowerId = new Guid("a1200000-0000-4000-8000-000000000003"),
+                            Quantity = 10,
+                            ReferenceNo = "INITIAL-STOCK-003",
+                            Type = 1
+                        },
+                        new
+                        {
+                            Id = new Guid("c1200000-0000-4000-8000-000000000004"),
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FlowerId = new Guid("a1200000-0000-4000-8000-000000000004"),
+                            Quantity = 20,
+                            ReferenceNo = "INITIAL-STOCK-004",
+                            Type = 1
+                        });
                 });
 
             modelBuilder.Entity("FlowerShop.Domain.Orders.Order", b =>

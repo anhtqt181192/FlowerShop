@@ -165,5 +165,35 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             new { Id = Guid.Parse("b1200000-0000-4000-8000-000000000002"), FlowerId = Guid.Parse("a1200000-0000-4000-8000-000000000002"), AvailableQuantity = 12, ReservedQuantity = 0 },
             new { Id = Guid.Parse("b1200000-0000-4000-8000-000000000003"), FlowerId = Guid.Parse("a1200000-0000-4000-8000-000000000003"), AvailableQuantity = 10, ReservedQuantity = 0 },
             new { Id = Guid.Parse("b1200000-0000-4000-8000-000000000004"), FlowerId = Guid.Parse("a1200000-0000-4000-8000-000000000004"), AvailableQuantity = 20, ReservedQuantity = 0 });
+
+        builder.Entity<InventoryTransaction>().HasData(
+            new
+            {
+                Id = Guid.Parse("c1200000-0000-4000-8000-000000000001"),
+                FlowerId = Guid.Parse("a1200000-0000-4000-8000-000000000001"),
+                Type = InventoryTransactionType.Import, Quantity = 18, ReferenceNo = "INITIAL-STOCK-001",
+                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            },
+            new
+            {
+                Id = Guid.Parse("c1200000-0000-4000-8000-000000000002"),
+                FlowerId = Guid.Parse("a1200000-0000-4000-8000-000000000002"),
+                Type = InventoryTransactionType.Import, Quantity = 12, ReferenceNo = "INITIAL-STOCK-002",
+                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            },
+            new
+            {
+                Id = Guid.Parse("c1200000-0000-4000-8000-000000000003"),
+                FlowerId = Guid.Parse("a1200000-0000-4000-8000-000000000003"),
+                Type = InventoryTransactionType.Import, Quantity = 10, ReferenceNo = "INITIAL-STOCK-003",
+                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            },
+            new
+            {
+                Id = Guid.Parse("c1200000-0000-4000-8000-000000000004"),
+                FlowerId = Guid.Parse("a1200000-0000-4000-8000-000000000004"),
+                Type = InventoryTransactionType.Import, Quantity = 20, ReferenceNo = "INITIAL-STOCK-004",
+                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            });
     }
 }
