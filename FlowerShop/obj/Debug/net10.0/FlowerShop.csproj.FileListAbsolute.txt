@@ -223,8 +223,8 @@ C:\Users\tuana\source\repos\FlowerShop\FlowerShop\obj\Debug\net10.0\FlowerShop.g
 C:\Users\tuana\source\repos\FlowerShop\FlowerShop\obj\Debug\net10.0\ref\FlowerShop.dll
 C:\Users\tuana\OneDrive\Documents\Project\FlowerShop\anhtqt181192\FlowerShop\FlowerShop\bin\Debug\net10.0\appsettings.Development.json
 C:\Users\tuana\OneDrive\Documents\Project\FlowerShop\anhtqt181192\FlowerShop\FlowerShop\bin\Debug\net10.0\appsettings.json
-C:\Users\tuana\OneDrive\Documents\Project\FlowerShop\anhtqt181192\FlowerShop\FlowerShop\bin\Debug\net10.0\FlowerShop.staticwebassets.endpoints.json
 C:\Users\tuana\OneDrive\Documents\Project\FlowerShop\anhtqt181192\FlowerShop\FlowerShop\bin\Debug\net10.0\FlowerShop.staticwebassets.runtime.json
+C:\Users\tuana\OneDrive\Documents\Project\FlowerShop\anhtqt181192\FlowerShop\FlowerShop\bin\Debug\net10.0\FlowerShop.staticwebassets.endpoints.json
 C:\Users\tuana\OneDrive\Documents\Project\FlowerShop\anhtqt181192\FlowerShop\FlowerShop\bin\Debug\net10.0\FlowerShop.exe
 C:\Users\tuana\OneDrive\Documents\Project\FlowerShop\anhtqt181192\FlowerShop\FlowerShop\bin\Debug\net10.0\FlowerShop.deps.json
 C:\Users\tuana\OneDrive\Documents\Project\FlowerShop\anhtqt181192\FlowerShop\FlowerShop\bin\Debug\net10.0\FlowerShop.runtimeconfig.json
