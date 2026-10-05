@@ -1,7 +1,315 @@
 ﻿@page "/"
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using System.Globalization
+@using FlowerShop.Domain.Common
 
-<PageTitle>Trang chủ</PageTitle>
+@inject ShopApplicationService Shop
 
-<h1>Xin chào, thế giới!</h1>
+<PageTitle>nở studio — Hoa tươi cho những điều dịu dàng</PageTitle>
 
-Chào mừng bạn đến với ứng dụng mới của bạn.
+<section class="hero">
+    <div class="hero-copy">
+        <span class="eyebrow"><span class="eyebrow-line"></span> HOA TƯƠI, GÓI GHÉM YÊU THƯƠNG</span>
+        <h1>Một chút dịu dàng<br />cho ngày <em>đặc biệt.</em></h1>
+        <p>Những đóa hoa được chọn lựa mỗi sớm, kết thành món quà nhỏ gửi đến người bạn thương.</p>
+        <a class="button button-dark" href="#collection">Khám phá bộ sưu tập <span>↗</span></a>
+        <div class="hero-note"><span>✳</span> Giao hoa tận nơi trong ngày tại TP. Hồ Chí Minh</div>
+    </div>
+    <div class="hero-art" role="img" aria-label="Bó hoa hồng tươi trong ánh nắng">
+        <span class="hero-stamp">HAND<br />PICKED<br /><b>✳</b></span>
+        <div class="hero-caption">the little things<br /><em>matter most</em></div>
+    </div>
+    <div class="hero-index">01 <span>/</span> 03</div>
+</section>
+
+<section class="promise-strip" id="story">
+    <div><span>✳</span><p>Hoa tươi mỗi ngày<small>Chọn hoa từ nông trại địa phương</small></p></div>
+    <div><span>♡</span><p>Gói hoa thủ công<small>Mỗi bó hoa đều là một phiên bản riêng</small></p></div>
+    <div><span>⌁</span><p>Giao nhanh trong ngày<small>Nâng niu từng cánh hoa đến tay bạn</small></p></div>
+</section>
+
+<section class="collection-section" id="collection">
+    <div class="section-heading">
+        <div>
+            <span class="eyebrow">GỬI ĐIỀU THƯƠNG</span>
+            <h2>Bó hoa dành cho <em>hôm nay</em></h2>
+        </div>
+        <p>Mỗi bó hoa là một lời nhắn<br />chưa kịp nói thành lời.</p>
+    </div>
+
+    <div class="collection-toolbar">
+        <div class="category-list">
+            <button class="@CategoryClass(null)" @onclick="() => SelectCategory(null)">Tất cả hoa</button>
+            @foreach (var category in categories)
+            {
+                <button class="@CategoryClass(category.Id)" @onclick="() => SelectCategory(category.Id)">@category.Name</button>
+            }
+        </div>
+        <span>@filteredFlowers.Count() SẢN PHẨM</span>
+    </div>
+
+    @if (!string.IsNullOrEmpty(loadError))
+    {
+        <div class="shop-alert">@loadError</div>
+    }
+    else if (isLoading)
+    {
+        <div class="loading-state">Đang chọn những đóa hoa thật xinh…</div>
+    }
+    else if (!filteredFlowers.Any())
+    {
+        <div class="loading-state">Bộ sưu tập sẽ sớm có thêm hoa mới. Bạn quay lại nhé!</div>
+    }
+    else
+    {
+        <div class="flower-grid">
+            @foreach (var flower in filteredFlowers)
+            {
+                <article class="flower-card" @key="flower.Id">
+                    <div class="flower-image">
+                        <img src="@flower.ImageUrl" alt="@flower.Name" loading="lazy" />
+                        <span class="flower-tag">@flower.CategoryName</span>
+                        <button class="quick-add" aria-label="Thêm @flower.Name vào giỏ" @onclick="() => AddToCart(flower)">
+                            <span>+</span> Thêm vào giỏ
+                        </button>
+                    </div>
+                    <div class="flower-info">
+                        <div><h3>@flower.Name</h3><p>@flower.Description</p></div>
+                        <strong>@FormatPrice(flower.Price)</strong>
+                    </div>
+                    <div class="stock-line"><span></span> @flower.AvailableQuantity sản phẩm sẵn có</div>
+                </article>
+            }
+        </div>
+    }
+</section>
+
+<section class="note-section">
+    <div class="note-image"></div>
+    <div class="note-copy">
+        <span class="eyebrow">TỪ KHU VƯỜN CỦA NỞ</span>
+        <h2>Hoa đẹp nhất<br />khi được <em>trao đi.</em></h2>
+        <p>Chúng mình tin rằng một bó hoa nhỏ có thể làm dịu cả một ngày dài. Vì thế mỗi thiết kế đều được nở chăm chút, từ cành hoa đầu tiên đến chiếc nơ cuối cùng.</p>
+        <a href="#collection">Chọn một bó hoa <span>↗</span></a>
+    </div>
+</section>
+
+<section class="newsletter">
+    <span class="newsletter-flower">✳</span>
+    <span class="eyebrow">MỘT GÓC NHỎ NGẬP HƯƠNG HOA</span>
+    <h2>Chuyện hoa, chuyện <em>thương.</em></h2>
+    <p>Ghé thăm bộ sưu tập mới và chọn một điều dịu dàng gửi đến ai đó.</p>
+    <a class="button button-light" href="#collection">Gửi một bó hoa <span>↗</span></a>
+</section>
+
+<button class="floating-cart" @onclick="OpenCheckout" aria-label="Mở giỏ hàng">
+    <span>Giỏ hoa</span><b>@CartCount</b>
+</button>
+
+@if (checkoutOpen)
+{
+    <div class="modal-backdrop" @onclick="CloseCheckout">
+        <section class="checkout-panel" role="dialog" aria-modal="true" aria-labelledby="checkout-title" @onclick:stopPropagation="true">
+            <button class="modal-close" @onclick="CloseCheckout" aria-label="Đóng">×</button>
+            <span class="eyebrow">GỬI HOA ĐẾN TẬN TAY</span>
+            <h2 id="checkout-title">Thông tin <em>giao hoa</em></h2>
+
+            @if (placedOrder is not null)
+            {
+                <div class="order-success">
+                    <span class="success-icon">♡</span>
+                    <h3>Cảm ơn bạn đã chọn nở!</h3>
+                    <p>Đơn hàng <strong>@placedOrder.Order.OrderNumber</strong> đã được ghi nhận.</p>
+                    <p>Tổng thanh toán: <strong>@FormatPrice(placedOrder.Order.TotalAmount)</strong></p>
+                    <button class="button button-dark" @onclick="CloseCheckout">Tiếp tục ngắm hoa</button>
+                </div>
+            }
+            else if (CartCount == 0)
+            {
+                <div class="empty-cart">
+                    <span>✳</span><p>Giỏ hoa của bạn còn đang trống.</p>
+                    <button class="button button-dark" @onclick="CloseCheckout">Chọn hoa xinh</button>
+                </div>
+            }
+            else
+            {
+                <div class="checkout-cart">
+                    @foreach (var item in CartItems)
+                    {
+                        <div class="checkout-item" @key="item.Flower.Id">
+                            <img src="@item.Flower.ImageUrl" alt="" />
+                            <div><strong>@item.Flower.Name</strong><small>@FormatPrice(item.Flower.Price)</small></div>
+                            <div class="quantity-control">
+                                <button @onclick="() => ChangeQuantity(item.Flower.Id, -1)" aria-label="Giảm số lượng">−</button>
+                                <span>@item.Quantity</span>
+                                <button @onclick="() => ChangeQuantity(item.Flower.Id, 1)" aria-label="Tăng số lượng">+</button>
+                            </div>
+                        </div>
+                    }
+                    <div class="checkout-total"><span>Tạm tính</span><strong>@FormatPrice(CartTotal)</strong></div>
+                </div>
+
+                <EditForm Model="checkout" OnValidSubmit="PlaceOrderAsync">
+                    <DataAnnotationsValidator />
+                    <div class="checkout-fields">
+                        <label>Người nhận<InputText @bind-Value="checkout.FullName" autocomplete="name" /></label>
+                        <ValidationMessage For="() => checkout.FullName" />
+                        <label>Số điện thoại<InputText @bind-Value="checkout.Phone" autocomplete="tel" /></label>
+                        <ValidationMessage For="() => checkout.Phone" />
+                        <label>Email (không bắt buộc)<InputText @bind-Value="checkout.Email" autocomplete="email" /></label>
+                        <div class="address-row">
+                            <label>Tỉnh / Thành phố<InputText @bind-Value="checkout.Province" /></label>
+                            <label>Quận / Huyện<InputText @bind-Value="checkout.District" /></label>
+                        </div>
+                        <div class="address-row">
+                            <label>Phường / Xã<InputText @bind-Value="checkout.Ward" /></label>
+                            <label>Địa chỉ nhận hoa<InputText @bind-Value="checkout.ShippingAddress" autocomplete="street-address" /></label>
+                        </div>
+                        <label>Thanh toán
+                            <InputSelect @bind-Value="checkout.PaymentMethod">
+                                <option value="@PaymentMethod.Cash">Thanh toán khi nhận hoa</option>
+                                <option value="@PaymentMethod.BankTransfer">Chuyển khoản</option>
+                                <option value="@PaymentMethod.VNPay">VNPay</option>
+                                <option value="@PaymentMethod.MoMo">MoMo</option>
+                            </InputSelect>
+                        </label>
+                    </div>
+                    @if (!string.IsNullOrEmpty(orderError))
+                    {
+                        <div class="shop-alert">@orderError</div>
+                    }
+                    <button class="button button-dark checkout-submit" type="submit" disabled="@isSubmitting">
+                        @(isSubmitting ? "Đang gửi đơn…" : $"Đặt hoa · {FormatPrice(CartTotal)}")
+                    </button>
+                </EditForm>
+            }
+        </section>
+    </div>
+}
+
+@code {
+    private readonly Dictionary<Guid, int> cart = [];
+    private readonly CheckoutForm checkout = new();
+    private IReadOnlyList<CategoryDto> categories = [];
+    private IReadOnlyList<FlowerDto> flowers = [];
+    private int? selectedCategory;
+    private bool isLoading = true;
+    private bool checkoutOpen;
+    private bool isSubmitting;
+    private string? loadError;
+    private string? orderError;
+    private PlacedOrderDto? placedOrder;
+
+    private IEnumerable<FlowerDto> filteredFlowers => flowers
+        .Where(flower => selectedCategory is null || flower.CategoryId == selectedCategory)
+        .Where(flower => flower.AvailableQuantity > 0);
+    private IEnumerable<(FlowerDto Flower, int Quantity)> CartItems => flowers
+        .Where(flower => cart.ContainsKey(flower.Id))
+        .Select(flower => (flower, cart[flower.Id]));
+    private int CartCount => cart.Values.Sum();
+    private decimal CartTotal => CartItems.Sum(item => item.Flower.Price * item.Quantity);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            categories = await Shop.GetCategoriesAsync(CancellationToken.None);
+            flowers = await Shop.GetFlowersAsync(false, CancellationToken.None);
+        }
+        catch
+        {
+            loadError = "Chưa thể tải bộ sưu tập. Vui lòng kiểm tra kết nối cơ sở dữ liệu rồi thử lại.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void SelectCategory(int? id) => selectedCategory = id;
+    private string CategoryClass(int? id) => selectedCategory == id ? "category-filter active" : "category-filter";
+
+    private void AddToCart(FlowerDto flower)
+    {
+        if (flower.AvailableQuantity <= cart.GetValueOrDefault(flower.Id))
+        {
+            orderError = "Số lượng sản phẩm trong kho đã được chọn hết.";
+            checkoutOpen = true;
+            return;
+        }
+        cart[flower.Id] = cart.GetValueOrDefault(flower.Id) + 1;
+        orderError = null;
+    }
+
+    private void ChangeQuantity(Guid flowerId, int change)
+    {
+        var quantity = cart.GetValueOrDefault(flowerId) + change;
+        if (quantity <= 0)
+            cart.Remove(flowerId);
+        else if (quantity <= flowers.Single(flower => flower.Id == flowerId).AvailableQuantity)
+            cart[flowerId] = quantity;
+    }
+
+    private void OpenCheckout()
+    {
+        placedOrder = null;
+        orderError = null;
+        checkoutOpen = true;
+    }
+
+    private void CloseCheckout() => checkoutOpen = false;
+
+    private async Task PlaceOrderAsync()
+    {
+        isSubmitting = true;
+        orderError = null;
+        try
+        {
+            var address = string.Join(", ", new[] { checkout.ShippingAddress, checkout.Ward, checkout.District, checkout.Province });
+            var request = new PlaceOrderRequest(
+                checkout.FullName, checkout.Phone, checkout.Email, address,
+                checkout.Province, checkout.District, checkout.Ward, checkout.ShippingAddress,
+                checkout.PaymentMethod,
+                cart.Select(item => new OrderLineRequest(item.Key, item.Value)).ToArray());
+            placedOrder = await Shop.PlaceOrderAsync(request, CancellationToken.None);
+            cart.Clear();
+            flowers = await Shop.GetFlowersAsync(false, CancellationToken.None);
+        }
+        catch (DomainRuleException exception)
+        {
+            orderError = exception.Message;
+        }
+        catch
+        {
+            orderError = "Chưa thể hoàn tất đơn hàng. Vui lòng thử lại sau.";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private static string FormatPrice(decimal price) =>
+        string.Format(CultureInfo.GetCultureInfo("vi-VN"), "{0:N0}₫", price);
+
+    private sealed class CheckoutForm
+    {
+        [Required(ErrorMessage = "Vui lòng nhập tên người nhận.")]
+        public string FullName { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Vui lòng nhập số điện thoại.")]
+        [Phone(ErrorMessage = "Số điện thoại không hợp lệ.")]
+        public string Phone { get; set; } = string.Empty;
+        [EmailAddress(ErrorMessage = "Email không hợp lệ.")]
+        public string? Email { get; set; }
+        [Required(ErrorMessage = "Vui lòng nhập tỉnh / thành phố.")]
+        public string Province { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Vui lòng nhập quận / huyện.")]
+        public string District { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Vui lòng nhập phường / xã.")]
+        public string Ward { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Vui lòng nhập địa chỉ nhận hoa.")]
+        public string ShippingAddress { get; set; } = string.Empty;
+        public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.Cash;
+    }
+}

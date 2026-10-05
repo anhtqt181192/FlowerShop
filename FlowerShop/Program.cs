@@ -1,6 +1,10 @@
 using FlowerShop.Components;
 using FlowerShop.Components.Account;
 using FlowerShop.Data;
+using FlowerShop.Application;
+using FlowerShop.Application.Contracts;
+using FlowerShop.Api;
+using FlowerShop.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +16,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddAuthorization();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
@@ -25,6 +30,10 @@ builder.Services.AddAuthentication(options =>
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
+builder.Services.AddScoped<EfShopRepository>();
+builder.Services.AddScoped<IShopRepository>(services => services.GetRequiredService<EfShopRepository>());
+builder.Services.AddScoped<IShopUnitOfWork>(services => services.GetRequiredService<EfShopRepository>());
+builder.Services.AddScoped<ShopApplicationService>();
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
@@ -54,9 +63,12 @@ else
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseAntiforgery();
 
 app.MapStaticAssets();
+app.MapShopEndpoints();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
@@ -64,5 +76,4 @@ app.MapRazorComponents<App>()
 app.MapAdditionalIdentityEndpoints();
 
 app.Run();
-
 

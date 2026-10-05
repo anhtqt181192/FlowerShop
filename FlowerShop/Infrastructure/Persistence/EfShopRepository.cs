@@ -4,6 +4,7 @@ using FlowerShop.Domain.Customers;
 using FlowerShop.Domain.Inventory;
 using FlowerShop.Domain.Orders;
 using FlowerShop.Domain.Payments;
+using FlowerShop.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace FlowerShop.Infrastructure.Persistence;
@@ -13,6 +14,10 @@ public sealed class EfShopRepository(ApplicationDbContext dbContext) : IShopRepo
     public async Task<IReadOnlyList<Flower>> GetActiveFlowersAsync(CancellationToken cancellationToken) =>
         await dbContext.Flowers.AsNoTracking().Include(flower => flower.Category)
             .Where(flower => flower.Status == FlowerStatus.Active)
+            .OrderBy(flower => flower.Name).ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<Flower>> GetAllFlowersAsync(CancellationToken cancellationToken) =>
+        await dbContext.Flowers.AsNoTracking().Include(flower => flower.Category)
             .OrderBy(flower => flower.Name).ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<Category>> GetCategoriesAsync(CancellationToken cancellationToken) =>
@@ -47,6 +52,9 @@ public sealed class EfShopRepository(ApplicationDbContext dbContext) : IShopRepo
 
     public Task<Payment?> GetPaymentAsync(Guid id, CancellationToken cancellationToken) =>
         dbContext.Payments.SingleOrDefaultAsync(payment => payment.Id == id, cancellationToken);
+
+    public Task<Inventory?> GetInventoryForFlowerAsync(Guid flowerId, CancellationToken cancellationToken) =>
+        dbContext.Inventories.SingleOrDefaultAsync(inventory => inventory.FlowerId == flowerId, cancellationToken);
 
     public void Add(Customer customer) => dbContext.Customers.Add(customer);
     public void Add(Order order) => dbContext.Orders.Add(order);

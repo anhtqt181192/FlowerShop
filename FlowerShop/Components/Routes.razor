@@ -3,7 +3,7 @@
 
 <Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(Pages.NotFound)">
     <Found Context="routeData">
-        @if (IsAccountPage(routeData.PageType))
+        @if (IsAccountPage(routeData.PageType) || IsPublicShopPage(routeData.PageType))
         {
             <!-- Allow anonymous access to account pages (login, register, reset, etc.) -->
             <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
@@ -33,4 +33,7 @@
         // Treat anything under the Account namespace as an anonymous-access page
         return fullName.Contains(".Account.", StringComparison.Ordinal);
     }
+
+    private static bool IsPublicShopPage(Type pageType) =>
+        pageType == typeof(Pages.Home);
 }
