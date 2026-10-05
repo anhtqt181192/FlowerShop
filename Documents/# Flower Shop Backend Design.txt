@@ -1,0 +1,646 @@
+# Flower Shop Backend Design
+
+## Overview
+
+Thiết kế hệ thống Shop Bán Hoa theo:
+
+- Domain Driven Design (DDD)
+- Clean Architecture
+- CQRS Ready
+- EF Core Code First
+- Domain Events
+- Aggregate Root Pattern
+
+---
+
+# Bounded Contexts
+
+```text
+Catalog
+├── Flower
+└── Category
+
+Customer
+└── Customer
+
+Ordering
+├── Order
+└── OrderItem
+
+Inventory
+├── Inventory
+└── InventoryTransaction
+
+Payment
+└── Payment
+```
+
+---
+
+# Aggregate Design
+
+## Customer Aggregate
+
+```text
+Customer
+```
+
+### Customer
+
+```csharp
+public class Customer : AggregateRoot<Guid>
+{
+    public string FullName { get; private set; }
+    public string Phone { get; private set; }
+    public string? Email { get; private set; }
+    public string? Address { get; private set; }
+
+    public DateTime CreatedAt { get; private set; }
+}
+```
+
+---
+
+# Catalog Aggregate
+
+## Category
+
+```csharp
+public class Category : AggregateRoot<int>
+{
+    public string Name { get; private set; }
+    public string? Description { get; private set; }
+}
+```
+
+## Flower
+
+```csharp
+public class Flower : AggregateRoot<Guid>
+{
+    public string Name { get; private set; }
+
+    public string? Description { get; private set; }
+
+    public decimal Price { get; private set; }
+
+    public string? ImageUrl { get; private set; }
+
+    public Guid CategoryId { get; private set; }
+
+    public FlowerStatus Status { get; private set; }
+}
+```
+
+### FlowerStatus
+
+```csharp
+public enum FlowerStatus
+{
+    Active = 1,
+    Inactive = 2
+}
+```
+
+---
+
+# Ordering Aggregate
+
+Order là Aggregate Root.
+
+Mọi thao tác với OrderItem phải đi qua Order.
+
+Không tồn tại OrderItem Repository.
+
+---
+
+## Order
+
+```csharp
+public class Order : AggregateRoot<Guid>
+{
+    private readonly List<OrderItem> _items = new();
+
+    public string OrderNumber { get; private set; }
+
+    public Guid CustomerId { get; private set; }
+
+    public ShippingAddress ShippingAddress { get; private set; }
+
+    public OrderStatus Status { get; private set; }
+
+    public decimal TotalAmount { get; private set; }
+
+    public IReadOnlyCollection<OrderItem> Items
+        => _items.AsReadOnly();
+
+    public DateTime CreatedAt { get; private set; }
+
+    public void AddItem(
+        Guid flowerId,
+        string flowerName,
+        decimal unitPrice,
+        int quantity)
+    {
+    }
+
+    public void RemoveItem(Guid flowerId)
+    {
+    }
+
+    public void Confirm()
+    {
+    }
+
+    public void MarkPaid()
+    {
+    }
+
+    public void StartPreparing()
+    {
+    }
+
+    public void StartDelivery()
+    {
+    }
+
+    public void Complete()
+    {
+    }
+
+    public void Cancel()
+    {
+    }
+}
+```
+
+---
+
+## OrderItem
+
+```csharp
+public class OrderItem
+{
+    public Guid Id { get; private set; }
+
+    public Guid FlowerId { get; private set; }
+
+    public string FlowerName { get; private set; }
+
+    public decimal UnitPrice { get; private set; }
+
+    public int Quantity { get; private set; }
+
+    public decimal SubTotal
+        => UnitPrice * Quantity;
+}
+```
+
+---
+
+## Order Status
+
+```csharp
+public enum OrderStatus
+{
+    Pending = 1,
+    Confirmed = 2,
+    Paid = 3,
+    Preparing = 4,
+    Delivering = 5,
+    Completed = 6,
+    Cancelled = 7
+}
+```
+
+---
+
+# Value Objects
+
+## Shipping Address
+
+```csharp
+public sealed record ShippingAddress(
+    string ReceiverName,
+    string Phone,
+    string Province,
+    string District,
+    string Ward,
+    string Address
+);
+```
+
+---
+
+# Inventory Aggregate
+
+Inventory là Aggregate độc lập.
+
+Order không được thao tác trực tiếp Inventory.
+
+Trao đổi thông qua Domain Event.
+
+---
+
+## Inventory
+
+```csharp
+public class Inventory : AggregateRoot<Guid>
+{
+    public Guid FlowerId { get; private set; }
+
+    public int AvailableQuantity { get; private set; }
+
+    public int ReservedQuantity { get; private set; }
+
+    public int ActualQuantity
+        => AvailableQuantity - ReservedQuantity;
+
+    public void Reserve(int quantity)
+    {
+    }
+
+    public void Release(int quantity)
+    {
+    }
+
+    public void Deduct(int quantity)
+    {
+    }
+
+    public void Import(int quantity)
+    {
+    }
+
+    public void Adjust(int quantity)
+    {
+    }
+}
+```
+
+---
+
+# Inventory Transaction
+
+Lưu lịch sử biến động kho.
+
+```csharp
+public class InventoryTransaction
+{
+    public Guid Id { get; private set; }
+
+    public Guid FlowerId { get; private set; }
+
+    public InventoryTransactionType Type { get; private set; }
+
+    public int Quantity { get; private set; }
+
+    public string ReferenceNo { get; private set; }
+
+    public DateTime CreatedAt { get; private set; }
+}
+```
+
+---
+
+## Inventory Transaction Type
+
+```csharp
+public enum InventoryTransactionType
+{
+    Import = 1,
+    Reserve = 2,
+    Release = 3,
+    Deduct = 4,
+    Adjust = 5
+}
+```
+
+---
+
+# Payment Aggregate
+
+```csharp
+public class Payment : AggregateRoot<Guid>
+{
+    public Guid OrderId { get; private set; }
+
+    public decimal Amount { get; private set; }
+
+    public PaymentMethod Method { get; private set; }
+
+    public PaymentStatus Status { get; private set; }
+
+    public string? TransactionCode { get; private set; }
+
+    public DateTime? PaidAt { get; private set; }
+
+    public void MarkSuccess(string transactionCode)
+    {
+    }
+
+    public void MarkFailed()
+    {
+    }
+}
+```
+
+---
+
+## Payment Method
+
+```csharp
+public enum PaymentMethod
+{
+    Cash = 1,
+    BankTransfer = 2,
+    VNPay = 3,
+    MoMo = 4
+}
+```
+
+---
+
+## Payment Status
+
+```csharp
+public enum PaymentStatus
+{
+    Pending = 1,
+    Success = 2,
+    Failed = 3
+}
+```
+
+---
+
+# Domain Events
+
+## Order Created
+
+```csharp
+public record OrderCreatedEvent(
+    Guid OrderId
+);
+```
+
+---
+
+## Order Paid
+
+```csharp
+public record OrderPaidEvent(
+    Guid OrderId,
+    IReadOnlyCollection<OrderItemInfo> Items
+);
+```
+
+---
+
+## Order Cancelled
+
+```csharp
+public record OrderCancelledEvent(
+    Guid OrderId,
+    IReadOnlyCollection<OrderItemInfo> Items
+);
+```
+
+---
+
+# Domain Event Flow
+
+## Create Order
+
+```text
+Create Order
+    |
+    +--> OrderCreatedEvent
+            |
+            +--> Reserve Inventory
+```
+
+---
+
+## Payment Success
+
+```text
+Payment Success
+    |
+    +--> Order.MarkPaid()
+            |
+            +--> OrderPaidEvent
+                    |
+                    +--> Inventory.Deduct()
+```
+
+---
+
+## Cancel Order
+
+```text
+Cancel Order
+    |
+    +--> OrderCancelledEvent
+            |
+            +--> Inventory.Release()
+```
+
+---
+
+# Inventory Rules
+
+## Rule 1
+
+Không cho phép đặt hàng vượt tồn kho.
+
+```text
+ActualQuantity >= OrderQuantity
+```
+
+---
+
+## Rule 2
+
+Tạo đơn sẽ Reserve tồn kho.
+
+```text
+Available = 100
+Reserved  = 0
+
+Order Qty = 5
+
+=>
+
+Available = 100
+Reserved  = 5
+
+Actual = 95
+```
+
+---
+
+## Rule 3
+
+Hủy đơn sẽ Release tồn kho.
+
+```text
+Available = 100
+Reserved = 5
+
+Cancel
+
+Available = 100
+Reserved = 0
+```
+
+---
+
+## Rule 4
+
+Thanh toán thành công mới Deduct tồn kho.
+
+```text
+Available = 100
+Reserved = 5
+
+Payment Success
+
+Available = 95
+Reserved = 0
+```
+
+---
+
+# Repositories
+
+```csharp
+public interface ICustomerRepository
+{
+}
+
+public interface IFlowerRepository
+{
+}
+
+public interface IOrderRepository
+{
+}
+
+public interface IInventoryRepository
+{
+}
+
+public interface IPaymentRepository
+{
+}
+```
+
+---
+
+# EF Core Mapping Requirements
+
+## Order
+
+```csharp
+builder.HasMany<OrderItem>("_items")
+       .WithOne()
+       .HasForeignKey("OrderId");
+
+builder.Navigation("_items")
+       .UsePropertyAccessMode(
+           PropertyAccessMode.Field);
+```
+
+---
+
+## ShippingAddress
+
+```csharp
+builder.OwnsOne(x => x.ShippingAddress);
+```
+
+---
+
+# Recommended Folder Structure
+
+```text
+src
+
+├── FlowerShop.Domain
+│   ├── Aggregates
+│   │   ├── Customer
+│   │   ├── Catalog
+│   │   ├── Order
+│   │   ├── Inventory
+│   │   └── Payment
+│   │
+│   ├── DomainEvents
+│   ├── ValueObjects
+│   ├── Enums
+│   └── Common
+│
+├── FlowerShop.Application
+│   ├── Features
+│   │   ├── Orders
+│   │   ├── Flowers
+│   │   ├── Inventory
+│   │   └── Payments
+│   │
+│   ├── Commands
+│   ├── Queries
+│   └── DTOs
+│
+├── FlowerShop.Infrastructure
+│   ├── Persistence
+│   ├── Repositories
+│   ├── DomainEventHandlers
+│   └── Integrations
+│
+└── FlowerShop.Api
+    ├── Controllers
+    ├── Middleware
+    └── Configurations
+```
+
+---
+
+# Business Workflow
+
+```text
+Customer Create Order
+            |
+            v
+      Reserve Inventory
+            |
+            v
+      Create Payment
+            |
+            v
+      Payment Success
+            |
+            v
+      Deduct Inventory
+            |
+            v
+      Preparing
+            |
+            v
+      Delivering
+            |
+            v
+      Completed
+```
+
+# Target
+
+Mục tiêu hệ thống:
+
+- Không overselling.
+- DDD Aggregate chuẩn.
+- Có audit tồn kho.
+- Hỗ trợ CQRS.
+- Hỗ trợ Event Driven trong tương lai.
+- Dễ mở rộng sang microservice.
+- EF Core Code First.
+- Clean Architecture.
