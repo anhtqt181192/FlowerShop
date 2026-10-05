@@ -29,6 +29,7 @@ public sealed class Inventory : AggregateRoot<Guid>
     public int ReservedQuantity { get; private set; }
     public int ActualQuantity => AvailableQuantity - ReservedQuantity;
     public byte[] Version { get; private set; } = [];
+    public Catalog.Flower? Flower { get; private set; }
 
     public void Reserve(int quantity)
     {
